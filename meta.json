@@ -1,0 +1,28 @@
+{
+    "$schema": "https://dl.viam.dev/module.schema.json",
+    "module_id": "erh:pgn-analyzer",
+    "visibility": "public",
+    "url": "https://github.com/erh/pgn-analyzer",
+    "description": "pgn analyzer",
+    "models": [
+    ],
+    "applications": [
+        {
+            "name": "pgn-analyzer",
+            "type": "single_machine",
+            "entrypoint": "dist/index.html"
+        }
+    ],
+    "entrypoint": "",
+    "first_run": "",
+    "build": {
+        "build": "make module",
+        "setup": "make setup-linux",
+        "arch": [
+            "linux/amd64",
+            "linux/arm64"
+        ],
+        "path" : "module.tar.gz"
+    },
+    
+}

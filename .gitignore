@@ -1,2 +1,4 @@
 node_modules
 *~
+module.tar.gz
+dist
