@@ -23,6 +23,6 @@
             "linux/arm64"
         ],
         "path" : "module.tar.gz"
-    },
+    }
     
 }
