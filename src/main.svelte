@@ -4,7 +4,7 @@
  
  import type { DialConf } from '@viamrobotics/sdk';
  import Status from "./lib/status.svelte"
- import Analyzer from "./lib/analyzer.svelte"
+ import Wrap from "./lib/wrap.svelte"
 
  let { host, credentials, children } = $props();
 
@@ -16,12 +16,12 @@
      disableSessions: false,
    },
  };
- 
+
 </script>
 
 <ViamProvider {dialConfigs}>
   <Status name="xxx" display="connection to {host}"/>
-  <Analyzer partID="xxx"/>
+  <Wrap partID="xxx"/>
   {@render children?.()}
 </ViamProvider>
 

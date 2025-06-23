@@ -4,6 +4,7 @@
 
  let {
    partID,
+   sensorName,
    refetchInterval = 5000,
    ...rest
  }: Props = $props();
@@ -11,7 +12,7 @@
  const allPgnClient = createResourceClient(
    SensorClient,
    () => partID,
-   () => "all-pgn"
+   () => sensorName
  );
 
  const query = createResourceQuery(allPgnClient, 'getReadings', () => ({
@@ -86,9 +87,10 @@
  function badPgn(pgn) {
    return pgn == 60928 || pgn == 126993;
  }
-   
+
 </script>
 
+<h2>Sensor {sensorName}</h2>
 {#if query.current.error}
   {query.current.error.message}
 {:else}
@@ -114,3 +116,4 @@
     {/each}
   </ul>
 {/if}
+
