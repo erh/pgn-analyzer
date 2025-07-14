@@ -9,14 +9,22 @@
  }: Props = $props();
 
  let sensorName = $state("all-pgn");
- 
- const resources = useResourceNames(() => partID);
+
+ function theList() {
+   const resources = useResourceNames(() => partID);
+   const lst = resources.current;
+   lst.sort((a,b) => {
+     return a.name.localeCompare(b.name);
+   });
+   console.log(lst.length);
+   return lst
+ }
  
 </script>
 
 Sensor
 <select bind:value={sensorName}>
-  {#each resources.current as r}
+  {#each theList() as r}
     <option selected={r.name === "all-pgn"}>
       {r.name}
     </option>
