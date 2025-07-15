@@ -15,8 +15,6 @@
       disableSessions: false,
     },
   });
-
-  $inspect(dialConfigs);
 </script>
 
 <ViamProvider dialConfigs={$state.snapshot(dialConfigs)}>
