@@ -1,35 +1,31 @@
 <script lang="ts">
- import { createResourceClient, createResourceQuery, useResourceNames } from '@viamrobotics/svelte-sdk';
- import { SensorClient } from '@viamrobotics/sdk';
- import Analyzer from "./analyzer.svelte"
- 
- let {
-   partID,
-   ...rest
- }: Props = $props();
+  import {
+    createResourceClient,
+    createResourceQuery,
+    useResourceNames,
+  } from "@viamrobotics/svelte-sdk";
+  import { ResourceName, SensorClient } from "@viamrobotics/sdk";
+  import Analyzer from "./analyzer.svelte";
 
- let sensorName = $state("all-pgn");
+  let { partID, ...rest }: Props = $props();
 
- function theList() {
-   const resources = useResourceNames(() => partID);
-   const lst = resources.current;
-   lst.sort((a,b) => {
-     return a.name.localeCompare(b.name);
-   });
-   console.log(lst.length);
-   return lst
- }
- 
+  let sensorName = $state("all-pgn");
+
+  const resources = useResourceNames(() => partID);
+  const sorted = $derived(
+    resources.current.toSorted((a, b) => {
+      return a.name.localeCompare(b.name);
+    })
+  );
 </script>
 
 Sensor
 <select bind:value={sensorName}>
-  {#each theList() as r}
-    <option selected={r.name === "all-pgn"}>
+  {#each sorted as r}
+    <option>
       {r.name}
     </option>
   {/each}
 </select>
 {sensorName}
-<Analyzer partID="xxx" sensorName={sensorName}/>
-
+<Analyzer partID="xxx" {sensorName} />
