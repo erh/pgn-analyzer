@@ -85,7 +85,7 @@
  }
 
  function badPgn(pgn) {
-   return pgn == 60928 || pgn == 126993;
+   return pgn == 126993;
  }
 
 </script>
