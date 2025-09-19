@@ -64,56 +64,118 @@
 
    var fields = [
      "Manufacturer Code",
-     "Device Class",
-     "Device Function"
+     "Device Class"
    ]
    
+   var prodinfofields = [
+     "Model ID",
+     "Software Version Code"
+   ]
+
+   var desc  = "";
+   var swver = "";
+
    for (var k in lst) {
      var m = lst[k];
      if (m.pgn == 60928) {
-       var d = "";
        for (var kk in fields) {
          var vv = fields[kk];
          if (vv in m) {
-           d += m[vv] + " ";
+           desc += m[vv] + " ";
          }
        }
-       return d;
+     }
+     if (m.pgn == 126996) {
+       for (var kk in prodinfofields) {
+         var vv = prodinfofields[kk];
+         if (vv in m) {
+           swver += m[vv] + " ";
+         }
+       }
      }
    }
-   return "no desc";
+   if (desc == "") {
+     return "No description";
+   }
+   desc = desc + swver;
+   return desc;
  }
 
  function badPgn(pgn) {
    return pgn == 126993;
  }
+let isOpen = false;
 
+function toggleCollapse() {
+  isOpen = !isOpen;
+}
 </script>
 
 <h2>Sensor {sensorName}</h2>
 {#if query.current.error}
   {query.current.error.message}
 {:else}
-  <ul>
-    {#each Object.entries(dataBySource()) as [src,lst]}
-      <li>
-        {src} - {description(lst)}
-        <ul>
+  {#each Object.entries(dataBySource()) as [src, lst]}
+    <details class="collapsible">
+      <summary class="collapsible-summary">
+        <strong>{src}</strong> - {description(lst)}
+      </summary>
+
+      <table class="table table-messages">
+        <thead>
+          <tr>
+            <th>PGN</th>
+            <th>Description</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
           {#each lst as m}
             {#if !badPgn(m.pgn)}
-              <li>
-                {m.pgn} - {m.description} - {m.timestamp}
-                <ul>
-                  {#each Object.entries(cleanFields(m)) as [k,v]}
-                    <li>{k} - {JSON.stringify(v)}</li>
-                  {/each}
-                </ul>
-              </li>
+              <tr>
+                <td>{m.pgn}</td>
+                <td>{m.description}</td>
+                <td>{m.timestamp}</td>
+              </tr>
+              <tr class="fields-row">
+                <td colspan="1"></td>
+                <td colspan="2">
+                  <details class="fields-collapsible">
+                    <summary>Fields</summary>
+                    <table class="table table-fields">
+                      <thead>
+                        <tr>
+                          <th>Field</th>
+                          <th>Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {#each Object.entries(cleanFields(m)) as [k, v]}
+                          <tr>
+                            <td>{k}</td>
+                            <td><pre class="value-pre">{JSON.stringify(v, null, 0)}</pre></td>
+                          </tr>
+                        {/each}
+                      </tbody>
+                    </table>
+                  </details>
+                </td>
+              </tr>
             {/if}
           {/each}
-        </ul>
-      </li>
-    {/each}
-  </ul>
+        </tbody>
+      </table>
+    </details>
+  {/each}
 {/if}
 
+<style>
+  .collapsible { margin: 0.75rem 0; border: 1px solid #ddd; border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
+  .collapsible-summary { cursor: pointer; font-size: 1.05rem; }
+  .table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+  .table th, .table td { border: 1px solid #e5e7eb; padding: 0.5rem; vertical-align: top; }
+  .table thead th { text-align: left; }
+  .fields-row { background: #fafafa; }
+  .fields-collapsible summary { cursor: pointer; font-weight: 600; }
+  .value-pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+</style>
