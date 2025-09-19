@@ -60,7 +60,24 @@
    return n;
  }
 
- function description(lst){
+ function findfields(lst,pgn,fields) {
+   for (var k in lst) {
+     var m = lst[k];
+     if (m.pgn == pgn) {
+       var d = "";
+       for (var kk in fields) {
+         var vv = fields[kk];
+         if (vv in m) {
+           d += m[vv] + " ";
+         }
+       }
+       return d;
+     }
+   }
+   return "";
+ }
+
+ function description(lst) {
 
    var fields = [
      "Manufacturer Code",
@@ -72,43 +89,16 @@
      "Software Version Code"
    ]
 
-   var desc  = "";
-   var swver = "";
-
-   for (var k in lst) {
-     var m = lst[k];
-     if (m.pgn == 60928) {
-       for (var kk in fields) {
-         var vv = fields[kk];
-         if (vv in m) {
-           desc += m[vv] + " ";
-         }
-       }
-     }
-     if (m.pgn == 126996) {
-       for (var kk in prodinfofields) {
-         var vv = prodinfofields[kk];
-         if (vv in m) {
-           swver += m[vv] + " ";
-         }
-       }
-     }
-   }
+   var desc  = findfields(lst, 60928, fields) + findfields(lst, 126996, prodinfofields)
    if (desc == "") {
      return "No description";
    }
-   desc = desc + swver;
    return desc;
  }
 
  function badPgn(pgn) {
    return pgn == 126993;
  }
-let isOpen = false;
-
-function toggleCollapse() {
-  isOpen = !isOpen;
-}
 </script>
 
 <h2>Sensor {sensorName}</h2>
