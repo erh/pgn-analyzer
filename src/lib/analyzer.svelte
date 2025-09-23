@@ -78,22 +78,20 @@
  }
 
  function description(lst) {
-
-   var fields = [
-     "Manufacturer Code",
-     "Device Class"
-   ]
+   var fields = [ "Manufacturer Code", "Device Class" ];
+   var prodinfofields = [ "Model ID" ];
    
-   var prodinfofields = [
-     "Model ID",
-     "Software Version Code"
-   ]
-
-   var desc  = findfields(lst, 60928, fields) + findfields(lst, 126996, prodinfofields)
+   var desc  = findfields(lst, 60928, fields) + findfields(lst, 126996, prodinfofields);
    if (desc == "") {
      return "No description";
    }
    return desc;
+ }
+
+ function swversion(lst) {
+   var prodinfofields = [ "Software Version Code" ];
+
+   return findfields(lst, 126996, prodinfofields);
  }
 
  function badPgn(pgn) {
@@ -108,9 +106,11 @@
   {#each Object.entries(dataBySource()) as [src, lst]}
     <details class="collapsible">
       <summary class="collapsible-summary">
-        <strong>{src}</strong> - {description(lst)}
+        <div class="summary-content">
+          <span><strong>{src}</strong> - {description(lst)}</span>
+          <span>{swversion(lst)}</span>
+        </div>
       </summary>
-
       <table class="table table-messages">
         <thead>
           <tr>
@@ -160,12 +160,118 @@
 {/if}
 
 <style>
-  .collapsible { margin: 0.75rem 0; border: 1px solid #ddd; border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
-  .collapsible-summary { cursor: pointer; font-size: 1.05rem; }
-  .table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-  .table th, .table td { border: 1px solid #e5e7eb; padding: 0.5rem; vertical-align: top; }
-  .table thead th { text-align: left; }
-  .fields-row { background: #fafafa; }
-  .fields-collapsible summary { cursor: pointer; font-weight: 600; }
-  .value-pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+  /* Light theme defaults via CSS variables */
+  :global(:root) {
+    --panel-bg:         #ffffff;
+    --panel-border:     #d1d5db;
+    --panel-summary-fg: #111827;
+    --table-border:     #e5e7eb;
+    --table-header-bg:  #f8fafc;
+    --fields-bg:        #fafafa;
+    --summary-hover: rgba(0,0,0,0.05);
+    --pre-bg:           #f6f8fa;
+    --link:             #2563eb;
+    --focus:            #3b82f6;
+  }
+
+  /* Dark theme overrides */
+  @media (prefers-color-scheme: dark) {
+    :global(:root) {
+      --panel-bg:         #111827;
+      --panel-border:     #374151;
+      --panel-summary-fg: #e5e7eb;
+      --table-border:     #374151;
+      --table-header-bg:  #1f2937;
+      --fields-bg:        #111827;
+      --summary-hover: rgba(255,255,255,0.06);
+      --pre-bg:           #0b1220;
+      --link:             #60a5fa;
+      --focus:            #60a5fa;
+      color-scheme: dark;
+    }
+  }
+
+  .collapsible {
+    margin: 0.75rem 0;
+    border: 1px solid var(--panel-border);
+    border-radius: 0.5rem;
+    background: var(--panel-bg);
+    padding: 0.375rem 0.75rem;
+  }
+
+  .collapsible-summary {
+    cursor: pointer;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: var(--panel-summary-fg);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.25rem;
+    border-radius: 0.5rem;
+  }
+
+  .collapsible-summary:hover {
+    background: var(--summary-hover);
+  }
+
+  .collapsible-summary:focus-visible,
+  .fields-collapsible summary:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+    border: 1px solid var(--table-border);
+  }
+
+  .table thead th {
+    text-align: left;
+    background: var(--table-header-bg);
+    border-bottom: 1px solid var(--table-border);
+    padding: 0.5rem;
+    font-weight: 600;
+  }
+
+  .table td {
+    border-top: 1px solid var(--table-border);
+    padding: 0.5rem;
+    vertical-align: top;
+  }
+
+  /* Row hover + subtle zebra striping */
+  .table tbody tr:hover {
+    background: var(--summary-hover);
+  }
+  .table tbody tr:nth-child(2n) {
+    background: color-mix(in srgb, var(--summary-hover) 50%, transparent);
+  }
+
+  .fields-row {
+    background: var(--fields-bg);
+  }
+
+  .fields-collapsible summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.25rem 0;
+  }
+
+  .value-pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--pre-bg);
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+  }
+
+  .summary-content {
+    display: flex;
+    justify-content: space-between; /* Pushes child elements to the edges */
+    width: 100%; /* Ensure it fills the entire width */
+  }
 </style>
