@@ -78,22 +78,20 @@
  }
 
  function description(lst) {
-
-   var fields = [
-     "Manufacturer Code",
-     "Device Class"
-   ]
+   var fields = [ "Manufacturer Code", "Device Class" ];
+   var prodinfofields = [ "Model ID" ];
    
-   var prodinfofields = [
-     "Model ID",
-     "Software Version Code"
-   ]
-
-   var desc  = findfields(lst, 60928, fields) + findfields(lst, 126996, prodinfofields)
+   var desc  = findfields(lst, 60928, fields) + findfields(lst, 126996, prodinfofields);
    if (desc == "") {
      return "No description";
    }
    return desc;
+ }
+
+ function swversion(lst) {
+   var prodinfofields = [ "Software Version Code" ];
+
+   return findfields(lst, 126996, prodinfofields);
  }
 
  function badPgn(pgn) {
@@ -108,9 +106,11 @@
   {#each Object.entries(dataBySource()) as [src, lst]}
     <details class="collapsible">
       <summary class="collapsible-summary">
-        <strong>{src}</strong> - {description(lst)}
+        <div class="summary-content">
+          <span><strong>{src}</strong> - {description(lst)}</span>
+          <span>{swversion(lst)}</span>
+        </div>
       </summary>
-
       <table class="table table-messages">
         <thead>
           <tr>
@@ -166,6 +166,25 @@
   .table th, .table td { border: 1px solid #e5e7eb; padding: 0.5rem; vertical-align: top; }
   .table thead th { text-align: left; }
   .fields-row { background: #fafafa; }
-  .fields-collapsible summary { cursor: pointer; font-weight: 600; }
-  .value-pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+  
+  .fields-collapsible summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.25rem 0;
+  }
+
+  .value-pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--pre-bg);
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+  }
+
+  .summary-content {
+    display: flex;
+    justify-content: space-between; /* Pushes child elements to the edges */
+    width: 100%; /* Ensure it fills the entire width */
+  }
 </style>
