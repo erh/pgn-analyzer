@@ -20,13 +20,15 @@
  }));
 
  const data = $derived(query.current.data)
- 
+
+ let activeTab = $state('all');
+
  function dataBySource() {
    var r = {};
 
    for (var k in data) {
      var d = data[k];
-     
+
      var old = r[d.src];
      if (old) {
        old.push(d);
@@ -36,8 +38,62 @@
        r[d.src] = [d];
      }
    }
-   
+
    return r;
+ }
+
+ function findMsg(lst, pgn) {
+   for (var i = 0; i < lst.length; i++) {
+     if (lst[i].pgn == pgn) return lst[i];
+   }
+   return null;
+ }
+
+ function getField(lst, pgns, field) {
+   for (var i = 0; i < pgns.length; i++) {
+     var m = findMsg(lst, pgns[i]);
+     if (m && m[field] !== undefined && m[field] !== null) return m[field];
+   }
+   return null;
+ }
+
+ function fmtNum(v, digits) {
+   if (v === null || v === undefined) return '';
+   if (typeof v === 'number') return v.toFixed(digits);
+   return String(v);
+ }
+
+ function fmtVal(v) {
+   if (v === null || v === undefined) return '';
+   return String(v);
+ }
+
+ function ageMs(ts) {
+   if (!ts) return null;
+   var t = typeof ts === 'number' ? ts : Date.parse(ts);
+   if (isNaN(t)) return null;
+   return Date.now() - t;
+ }
+
+ function newestTimestamp(lst, pgns) {
+   var newest = null;
+   for (var i = 0; i < pgns.length; i++) {
+     var m = findMsg(lst, pgns[i]);
+     if (m && m.timestamp) {
+       var t = typeof m.timestamp === 'number' ? m.timestamp : Date.parse(m.timestamp);
+       if (!isNaN(t) && (newest === null || t > newest)) newest = t;
+     }
+   }
+   return newest;
+ }
+
+ const movementPgns = [129025, 129029, 129026, 127250, 127257];
+
+ function fmtAge(ms) {
+   if (ms === null || ms === undefined) return '';
+   if (ms < 1000) return ms + 'ms';
+   if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+   return (ms / 60000).toFixed(1) + 'm';
  }
  
  function cleanFields(m) {
@@ -102,9 +158,23 @@
 </script>
 
 <h2>Sensor {sensorName}</h2>
+
+<div class="tabs">
+  <button
+    class="tab"
+    class:active={activeTab === 'all'}
+    on:click={() => (activeTab = 'all')}
+  >All PGNs</button>
+  <button
+    class="tab"
+    class:active={activeTab === 'movement'}
+    on:click={() => (activeTab = 'movement')}
+  >Movement</button>
+</div>
+
 {#if query.current.error}
   {query.current.error.message}
-{:else}
+{:else if activeTab === 'all'}
   {#each Object.entries(dataBySource()) as [src, lst]}
     <details class="collapsible">
       <summary class="collapsible-summary">
@@ -157,6 +227,66 @@
       </table>
     </details>
   {/each}
+{:else if activeTab === 'movement'}
+  <p class="movement-note">
+    Fields used by
+    <a href="https://github.com/viam-labs/viamboat/blob/main/movementsensor.go" target="_blank" rel="noopener">viamboat movementsensor</a>.
+    PGNs 129025 / 129029 (position), 129026 (COG/SOG), 127250 (heading), 127257 (attitude).
+  </p>
+  <div class="movement-scroll">
+    <table class="table table-movement">
+      <thead>
+        <tr>
+          <th rowspan="2">Src</th>
+          <th rowspan="2">Description</th>
+          <th colspan="4">Position (129025 / 129029)</th>
+          <th colspan="3">COG/SOG (129026)</th>
+          <th colspan="2">Heading (127250)</th>
+          <th colspan="3">Attitude (127257)</th>
+          <th rowspan="2">Newest age</th>
+        </tr>
+        <tr>
+          <th>Latitude</th>
+          <th>Longitude</th>
+          <th>HDOP</th>
+          <th>#SVs</th>
+          <th>COG</th>
+          <th>SOG</th>
+          <th>COG Ref</th>
+          <th>Heading</th>
+          <th>Hdg Ref</th>
+          <th>Roll</th>
+          <th>Pitch</th>
+          <th>Yaw</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each Object.entries(dataBySource()) as [src, lst]}
+          {@const newest = newestTimestamp(lst, movementPgns)}
+          {@const age = newest === null ? null : Date.now() - newest}
+          {#if findMsg(lst, 129025) || findMsg(lst, 129029) || findMsg(lst, 129026) || findMsg(lst, 127250) || findMsg(lst, 127257)}
+            <tr>
+              <td><strong>{src}</strong></td>
+              <td>{description(lst)}</td>
+              <td>{fmtNum(getField(lst, [129029, 129025], 'Latitude'), 6)}</td>
+              <td>{fmtNum(getField(lst, [129029, 129025], 'Longitude'), 6)}</td>
+              <td>{fmtNum(getField(lst, [129029], 'HDOP'), 2)}</td>
+              <td>{fmtVal(getField(lst, [129029], 'Number of SVs'))}</td>
+              <td>{fmtNum(getField(lst, [129026], 'COG'), 1)}</td>
+              <td>{fmtNum(getField(lst, [129026], 'SOG'), 2)}</td>
+              <td>{fmtVal(getField(lst, [129026], 'COG Reference'))}</td>
+              <td>{fmtNum(getField(lst, [127250], 'Heading'), 1)}</td>
+              <td>{fmtVal(getField(lst, [127250], 'Reference'))}</td>
+              <td>{fmtNum(getField(lst, [127257], 'Roll'), 2)}</td>
+              <td>{fmtNum(getField(lst, [127257], 'Pitch'), 2)}</td>
+              <td>{fmtNum(getField(lst, [127257], 'Yaw'), 2)}</td>
+              <td>{fmtAge(age)}</td>
+            </tr>
+          {/if}
+        {/each}
+      </tbody>
+    </table>
+  </div>
 {/if}
 
 <style>
@@ -168,4 +298,21 @@
   .fields-row { background: rgba(127, 127, 127, 0.1); }
   .fields-collapsible summary { cursor: pointer; font-weight: 600; }
   .value-pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+  .tabs { display: flex; gap: 0.25rem; margin: 0.5rem 0; border-bottom: 1px solid #ddd; }
+  .tab {
+    background: transparent;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 0.4rem 0.4rem 0 0;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: inherit;
+    margin-bottom: -1px;
+  }
+  .tab.active { background: rgba(127, 127, 127, 0.15); font-weight: 600; }
+  .movement-note { font-size: 0.85rem; opacity: 0.8; margin: 0.5rem 0; }
+  .movement-scroll { overflow-x: auto; }
+  .table-movement { font-size: 0.9rem; }
+  .table-movement th, .table-movement td { white-space: nowrap; }
 </style>

@@ -9,6 +9,14 @@
  let myState = $state({error : ""});
 
  function getHostAndCredentials() {
+   var qs = new URLSearchParams(window.location.search);
+   var qHost = qs.get("host");
+   var qKey = qs.get("api-key") || qs.get("apiKey") || qs.get("key");
+   var qEntity = qs.get("authEntity") || qs.get("auth-entity") || qs.get("id");
+   if (qHost && qKey && qEntity) {
+     return [qHost, {type: 'api-key', payload: qKey, authEntity: qEntity}];
+   }
+
    var parts = window.location.pathname.split("/");
    if (parts && parts.length >= 3 && parts[1] == "machine") {
      var machineId = parts[2];
@@ -25,7 +33,7 @@
      var x = JSON.parse(x);
      return [x.hostname, {type: 'api-key', payload: x.key, authEntity: x.id}];
    }
-   
+
    return ["", {}];
  }
  
