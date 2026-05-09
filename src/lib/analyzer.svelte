@@ -165,7 +165,7 @@
   .table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
   .table th, .table td { border: 1px solid #e5e7eb; padding: 0.5rem; vertical-align: top; }
   .table thead th { text-align: left; }
-  .fields-row { background: #fafafa; }
+  .fields-row { background: rgba(127, 127, 127, 0.1); }
   .fields-collapsible summary { cursor: pointer; font-weight: 600; }
   .value-pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
 </style>
