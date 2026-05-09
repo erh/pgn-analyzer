@@ -1,6 +1,7 @@
 <script lang="ts">
- import { createResourceClient, createResourceQuery } from '@viamrobotics/svelte-sdk';
- import { SensorClient } from '@viamrobotics/sdk';
+ import { createResourceClient, createResourceQuery, useResourceNames } from '@viamrobotics/svelte-sdk';
+ import { MovementSensorClient, SensorClient } from '@viamrobotics/sdk';
+ import { Struct } from '@bufbuild/protobuf';
 
  let {
    partID,
@@ -22,6 +23,33 @@
  const data = $derived(query.current.data)
 
  let activeTab = $state('all');
+
+ const movementSensorNames = useResourceNames(() => partID, 'movement_sensor');
+ let movementSensorName = $state('');
+ $effect(() => {
+   const names = movementSensorNames.current;
+   if (names && names.length > 0 && !names.find((r: any) => r.name === movementSensorName)) {
+     movementSensorName = names[0].name;
+   }
+ });
+
+ const movementClient = createResourceClient(
+   MovementSensorClient,
+   () => partID,
+   () => movementSensorName
+ );
+
+ const debugCmd = Struct.fromJson({ debug: true });
+ const debugQuery = createResourceQuery(
+   movementClient,
+   'doCommand',
+   () => [debugCmd] as [Struct],
+   () => ({
+     refetchInterval,
+     enabled: activeTab === 'movement' && !!movementSensorName,
+   })
+ );
+ const debugData = $derived<any>((debugQuery.current.data as any)?.debug);
 
  function dataBySource() {
    var r = {};
@@ -154,6 +182,72 @@
 
  function badPgn(pgn) {
    return pgn == 126993;
+ }
+
+ function debugSection(name: string): any {
+   const d = debugData;
+   if (!d || typeof d !== 'object') return null;
+   return d[name] || null;
+ }
+
+ function debugChosen(name: string): number | null {
+   const s = debugSection(name);
+   if (!s) return null;
+   const c = s.chosen;
+   return typeof c === 'number' ? c : null;
+ }
+
+ function debugReason(name: string): string {
+   const s = debugSection(name);
+   return s && typeof s.reason === 'string' ? s.reason : '';
+ }
+
+ function debugSrc(name: string, src: any): any {
+   const s = debugSection(name);
+   if (!s) return null;
+   return s['src-' + src] || null;
+ }
+
+ function isChosen(name: string, src: any): boolean {
+   const c = debugChosen(name);
+   if (c === null) return false;
+   return String(c) === String(src);
+ }
+
+ function hdopAvgCell(src: any): string {
+   const e = debugSrc('position', src);
+   if (!e) return '';
+   if (typeof e.smoothedHdop !== 'number' || e.smoothedHdop <= 0) return '';
+   const n = typeof e.hdopSamples === 'number' ? e.hdopSamples : 0;
+   return e.smoothedHdop.toFixed(2) + (n ? ' (' + n + ')' : '');
+ }
+
+ function hdopAvgTitle(src: any): string {
+   const e = debugSrc('position', src);
+   if (!e) return '';
+   const used = Array.isArray(e.hdopAveraged) ? e.hdopAveraged : [];
+   const n = typeof e.hdopSamples === 'number' ? e.hdopSamples : 0;
+   var s = 'Trimmed mean over last minute';
+   if (n) s += '; window=' + n + ' samples';
+   if (used.length) s += '; averaged ' + used.length + ' values: [' + used.map((v: number) => v.toFixed(2)).join(', ') + ']';
+   return s;
+ }
+
+ function chosenMark(name: string, src: any): string {
+   const e = debugSrc(name, src);
+   if (!e) return '';
+   const chosen = isChosen(name, src);
+   var bits: string[] = [];
+   if (name === 'position') {
+     if (typeof e.score === 'number') bits.push('s=' + e.score.toFixed(2));
+     if (typeof e.hdop === 'number' && e.hdop > 0) bits.push('hdop=' + e.hdop.toFixed(2));
+   } else {
+     if (typeof e.hz === 'number') bits.push(e.hz.toFixed(1) + 'Hz');
+     if (e.fresh === false) bits.push('stale');
+     if (name === 'cog' && e.cogReliable === false) bits.push('cog unreliable');
+   }
+   const tail = bits.length ? ' ' + bits.join(' ') : '';
+   return (chosen ? '✓' : '·') + tail;
  }
 
  let mapEl: HTMLDivElement | null = $state(null);
@@ -325,6 +419,41 @@
     <a href="https://github.com/viam-labs/viamboat/blob/main/movementsensor.go" target="_blank" rel="noopener">viamboat movementsensor</a>.
     PGNs 129025 / 129029 (position), 129026 (COG/SOG), 127250 (heading), 127257 (attitude).
   </p>
+  <div class="movement-chooser">
+    {#if movementSensorNames.current && movementSensorNames.current.length > 0}
+      <label>
+        Movement sensor:
+        <select bind:value={movementSensorName}>
+          {#each movementSensorNames.current as r}
+            <option value={r.name}>{r.name}</option>
+          {/each}
+        </select>
+      </label>
+      {#if debugQuery.current.error}
+        <div class="chooser-err">debug DoCommand failed: {debugQuery.current.error.message}</div>
+      {:else if debugData}
+        <div class="chooser-row">
+          <strong>Position</strong>
+          chosen: <code>src {debugChosen('position') ?? '—'}</code>
+          <span class="chooser-reason">{debugReason('position')}</span>
+        </div>
+        <div class="chooser-row">
+          <strong>Heading</strong>
+          chosen: <code>src {debugChosen('heading') ?? '—'}</code>
+          <span class="chooser-reason">{debugReason('heading')}</span>
+        </div>
+        <div class="chooser-row">
+          <strong>COG/SOG</strong>
+          chosen: <code>src {debugChosen('cog') ?? '—'}</code>
+          <span class="chooser-reason">{debugReason('cog')}</span>
+        </div>
+      {:else}
+        <div class="chooser-loading">loading debug snapshot…</div>
+      {/if}
+    {:else}
+      <div class="chooser-loading">no movement_sensor resource found on this part</div>
+    {/if}
+  </div>
   <div class="map-container" bind:this={mapEl}></div>
   <div class="movement-scroll">
     <table class="table table-movement">
@@ -332,16 +461,18 @@
         <tr>
           <th rowspan="2">Src</th>
           <th rowspan="2">Description</th>
-          <th colspan="4">Position (129025 / 129029)</th>
+          <th colspan="5">Position (129025 / 129029)</th>
           <th colspan="3">COG/SOG (129026)</th>
           <th colspan="2">Heading (127250)</th>
           <th colspan="3">Attitude (127257)</th>
+          <th colspan="3">Chooser</th>
           <th rowspan="2">Newest age</th>
         </tr>
         <tr>
           <th>Latitude</th>
           <th>Longitude</th>
           <th>HDOP</th>
+          <th title="Trimmed mean HDOP from movementsensor over the last minute">HDOP avg</th>
           <th>#SVs</th>
           <th>COG</th>
           <th>SOG</th>
@@ -351,6 +482,9 @@
           <th>Roll</th>
           <th>Pitch</th>
           <th>Yaw</th>
+          <th title="Chosen for Position">Pos</th>
+          <th title="Chosen for Heading">Hdg</th>
+          <th title="Chosen for COG/SOG">COG</th>
         </tr>
       </thead>
       <tbody>
@@ -361,9 +495,17 @@
             <tr>
               <td><strong>{src}</strong></td>
               <td>{description(lst)}</td>
-              <td>{fmtNum(getField(lst, [129029, 129025], 'Latitude'), 6)}</td>
+              <td>
+                {fmtNum(getField(lst, [129029, 129025], 'Latitude'), 6)}
+                {#if typeof getField(lst, [129029, 129025], 'Latitude') === 'number' && typeof getField(lst, [129029, 129025], 'Longitude') === 'number'}
+                  <a class="gmaps-link"
+                     href={'https://www.google.com/maps?q=' + getField(lst, [129029, 129025], 'Latitude') + ',' + getField(lst, [129029, 129025], 'Longitude')}
+                     target="_blank" rel="noopener" title="Open in Google Maps">map</a>
+                {/if}
+              </td>
               <td>{fmtNum(getField(lst, [129029, 129025], 'Longitude'), 6)}</td>
               <td>{fmtNum(getField(lst, [129029], 'HDOP'), 2)}</td>
+              <td title={hdopAvgTitle(src)}>{hdopAvgCell(src)}</td>
               <td>{fmtVal(getField(lst, [129029], 'Number of SVs'))}</td>
               <td>{fmtNum(getField(lst, [129026], 'COG'), 1)}</td>
               <td>{fmtNum(getField(lst, [129026], 'SOG'), 2)}</td>
@@ -373,6 +515,9 @@
               <td>{fmtNum(getField(lst, [127257], 'Roll'), 2)}</td>
               <td>{fmtNum(getField(lst, [127257], 'Pitch'), 2)}</td>
               <td>{fmtNum(getField(lst, [127257], 'Yaw'), 2)}</td>
+              <td class:chosen={isChosen('position', src)}>{chosenMark('position', src)}</td>
+              <td class:chosen={isChosen('heading', src)}>{chosenMark('heading', src)}</td>
+              <td class:chosen={isChosen('cog', src)}>{chosenMark('cog', src)}</td>
               <td>{fmtAge(age)}</td>
             </tr>
           {/if}
@@ -410,4 +555,12 @@
   .table-movement th, .table-movement td { white-space: nowrap; }
   .map-container { height: 400px; width: 100%; margin: 0.5rem 0 0.75rem; border: 1px solid #ddd; border-radius: 0.4rem; }
   :global(.leaflet-tooltip.src-label) { font-weight: 600; background: rgba(255, 255, 255, 0.9); color: #111; padding: 2px 6px; }
+  .movement-chooser { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.5rem 0.75rem; margin: 0.5rem 0; border: 1px solid #ddd; border-radius: 0.4rem; font-size: 0.9rem; }
+  .movement-chooser label { display: flex; align-items: center; gap: 0.5rem; }
+  .chooser-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+  .chooser-reason { opacity: 0.85; font-style: italic; }
+  .chooser-err { color: #b00020; }
+  .chooser-loading { opacity: 0.7; font-style: italic; }
+  .table-movement td.chosen { background: rgba(0, 160, 0, 0.18); font-weight: 600; }
+  .gmaps-link { margin-left: 0.35rem; font-size: 0.8rem; }
 </style>
