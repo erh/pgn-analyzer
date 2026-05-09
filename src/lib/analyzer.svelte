@@ -155,6 +155,98 @@
  function badPgn(pgn) {
    return pgn == 126993;
  }
+
+ let mapEl: HTMLDivElement | null = $state(null);
+ let mapInstance: any = null;
+ let markersLayer: any = null;
+ let leafletLoaded = $state(false);
+
+ function loadLeaflet() {
+   if (typeof window === 'undefined') return;
+   if ((window as any).L) {
+     leafletLoaded = true;
+     return;
+   }
+   if (!document.querySelector('link[data-leaflet]')) {
+     const link = document.createElement('link');
+     link.rel = 'stylesheet';
+     link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+     link.setAttribute('data-leaflet', 'true');
+     document.head.appendChild(link);
+   }
+   const existing = document.querySelector('script[data-leaflet]') as HTMLScriptElement | null;
+   if (existing) {
+     if ((window as any).L) leafletLoaded = true;
+     else existing.addEventListener('load', () => { leafletLoaded = true; });
+     return;
+   }
+   const script = document.createElement('script');
+   script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+   script.setAttribute('data-leaflet', 'true');
+   script.onload = () => { leafletLoaded = true; };
+   document.head.appendChild(script);
+ }
+
+ function getPositions() {
+   var positions = [];
+   var bySrc = dataBySource();
+   for (var src in bySrc) {
+     var lst = bySrc[src];
+     var lat = getField(lst, [129029, 129025], 'Latitude');
+     var lon = getField(lst, [129029, 129025], 'Longitude');
+     if (typeof lat === 'number' && typeof lon === 'number' && !isNaN(lat) && !isNaN(lon)) {
+       positions.push({ src: src, lat: lat, lon: lon, desc: description(lst) });
+     }
+   }
+   return positions;
+ }
+
+ $effect(() => {
+   if (activeTab === 'movement') {
+     loadLeaflet();
+   }
+ });
+
+ $effect(() => {
+   if (activeTab !== 'movement') {
+     if (mapInstance) {
+       mapInstance.remove();
+       mapInstance = null;
+       markersLayer = null;
+     }
+     return;
+   }
+   if (!leafletLoaded || !mapEl) return;
+   const L = (window as any).L;
+   if (!mapInstance || mapInstance._container !== mapEl) {
+     if (mapInstance) {
+       mapInstance.remove();
+       mapInstance = null;
+       markersLayer = null;
+     }
+     mapInstance = L.map(mapEl).setView([0, 0], 2);
+     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+       attribution: '© OpenStreetMap',
+       maxZoom: 19
+     }).addTo(mapInstance);
+     markersLayer = L.layerGroup().addTo(mapInstance);
+   }
+   markersLayer.clearLayers();
+   var positions = getPositions();
+   var bounds: any[] = [];
+   positions.forEach((p) => {
+     var marker = L.marker([p.lat, p.lon]).addTo(markersLayer);
+     marker.bindTooltip(String(p.src), { permanent: true, direction: 'top', className: 'src-label' });
+     marker.bindPopup('<strong>Src ' + p.src + '</strong><br>' + p.desc + '<br>' + p.lat.toFixed(6) + ', ' + p.lon.toFixed(6));
+     bounds.push([p.lat, p.lon]);
+   });
+   if (bounds.length === 1) {
+     mapInstance.setView(bounds[0], 13);
+   } else if (bounds.length > 1) {
+     mapInstance.fitBounds(bounds, { padding: [40, 40] });
+   }
+   setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 50);
+ });
 </script>
 
 <h2>Sensor {sensorName}</h2>
@@ -233,6 +325,7 @@
     <a href="https://github.com/viam-labs/viamboat/blob/main/movementsensor.go" target="_blank" rel="noopener">viamboat movementsensor</a>.
     PGNs 129025 / 129029 (position), 129026 (COG/SOG), 127250 (heading), 127257 (attitude).
   </p>
+  <div class="map-container" bind:this={mapEl}></div>
   <div class="movement-scroll">
     <table class="table table-movement">
       <thead>
@@ -315,4 +408,6 @@
   .movement-scroll { overflow-x: auto; }
   .table-movement { font-size: 0.9rem; }
   .table-movement th, .table-movement td { white-space: nowrap; }
+  .map-container { height: 400px; width: 100%; margin: 0.5rem 0 0.75rem; border: 1px solid #ddd; border-radius: 0.4rem; }
+  :global(.leaflet-tooltip.src-label) { font-weight: 600; background: rgba(255, 255, 255, 0.9); color: #111; padding: 2px 6px; }
 </style>
