@@ -304,7 +304,10 @@
      var lst = bySrc[src];
      var lat = getField(lst, [129029, 129025], 'Latitude');
      var lon = getField(lst, [129029, 129025], 'Longitude');
-     if (typeof lat === 'number' && typeof lon === 'number' && !isNaN(lat) && !isNaN(lon)) {
+     var newest = newestTimestamp(lst, [129029, 129025]);
+     var age = newest === null ? null : Date.now() - newest;
+     if (typeof lat === 'number' && typeof lon === 'number' && !isNaN(lat) && !isNaN(lon)
+         && age !== null && age <= 30 * 60 * 1000) {
        positions.push({ src: src, lat: lat, lon: lon, desc: description(lst) });
      }
    }
@@ -625,9 +628,9 @@
   }
   .tab.active { background: rgba(127, 127, 127, 0.15); font-weight: 600; }
   .movement-note { font-size: 0.85rem; opacity: 0.8; margin: 0.5rem 0; }
-  .movement-scroll { overflow-x: auto; }
-  .table-movement { font-size: 0.9rem; }
-  .table-movement th, .table-movement td { white-space: nowrap; }
+  .movement-scroll { width: 100%; }
+  .table-movement { font-size: 0.9rem; table-layout: auto; }
+  .table-movement th, .table-movement td { white-space: normal; word-break: break-word; }
   .map-container { height: 400px; width: 100%; margin: 0.5rem 0 0.75rem; border: 1px solid #ddd; border-radius: 0.4rem; }
   :global(.leaflet-tooltip.src-label) { font-weight: 600; background: rgba(255, 255, 255, 0.9); color: #111; padding: 2px 6px; }
   .movement-chooser { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.5rem 0.75rem; margin: 0.5rem 0; border: 1px solid #ddd; border-radius: 0.4rem; font-size: 0.9rem; }
