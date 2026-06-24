@@ -609,7 +609,7 @@
   .collapsible { margin: 0.75rem 0; border: 1px solid #ddd; border-radius: 0.5rem; padding: 0.5rem 0.75rem; }
   .collapsible-summary { cursor: pointer; font-size: 1.05rem; }
   .table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
-  .table th, .table td { border: 1px solid #e5e7eb; padding: 0.5rem; vertical-align: top; }
+  .table th, .table td { border: 1px solid #e5e7eb; padding: 0.5rem; vertical-align: top; white-space: nowrap; }
   .table thead th { text-align: left; }
   .fields-row { background: rgba(127, 127, 127, 0.1); }
   .fields-collapsible summary { cursor: pointer; font-weight: 600; }
@@ -630,7 +630,6 @@
   .movement-note { font-size: 0.85rem; opacity: 0.8; margin: 0.5rem 0; }
   .movement-scroll { width: 100%; }
   .table-movement { font-size: 0.9rem; table-layout: auto; }
-  .table-movement th, .table-movement td { white-space: normal; word-break: break-word; }
   .map-container { height: 400px; width: 100%; margin: 0.5rem 0 0.75rem; border: 1px solid #ddd; border-radius: 0.4rem; }
   :global(.leaflet-tooltip.src-label) { font-weight: 600; background: rgba(255, 255, 255, 0.9); color: #111; padding: 2px 6px; }
   .movement-chooser { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.5rem 0.75rem; margin: 0.5rem 0; border: 1px solid #ddd; border-radius: 0.4rem; font-size: 0.9rem; }
