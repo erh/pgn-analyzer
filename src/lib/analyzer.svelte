@@ -85,6 +85,17 @@
    return null;
  }
 
+ function getFieldMulti(lst, pgns, fields) {
+   for (var i = 0; i < pgns.length; i++) {
+     var m = findMsg(lst, pgns[i]);
+     if (!m) continue;
+     for (var j = 0; j < fields.length; j++) {
+       if (m[fields[j]] !== undefined && m[fields[j]] !== null) return m[fields[j]];
+     }
+   }
+   return null;
+ }
+
  function fmtNum(v, digits) {
    if (v === null || v === undefined) return '';
    if (typeof v === 'number') return v.toFixed(digits);
@@ -116,6 +127,11 @@
  }
 
  const movementPgns = [129025, 129029, 129026, 127250, 127257];
+
+ // Transducer / water-sensed data:
+ // 128267 Water Depth, 128259 Speed Water Referenced (paddle wheel),
+ // 130316 / 130312 / 130311 Temperature (water temp), 128275 Distance Log.
+ const transducerPgns = [128267, 128259, 130316, 130312, 130311, 128275];
 
  function fmtAge(ms) {
    if (ms === null || ms === undefined) return '';
@@ -356,6 +372,11 @@
     class:active={activeTab === 'movement'}
     on:click={() => (activeTab = 'movement')}
   >Movement</button>
+  <button
+    class="tab"
+    class:active={activeTab === 'transducers'}
+    on:click={() => (activeTab = 'transducers')}
+  >Transducers</button>
 </div>
 
 {#if query.current.error}
@@ -518,6 +539,60 @@
               <td class:chosen={isChosen('position', src)}>{chosenMark('position', src)}</td>
               <td class:chosen={isChosen('heading', src)}>{chosenMark('heading', src)}</td>
               <td class:chosen={isChosen('cog', src)}>{chosenMark('cog', src)}</td>
+              <td>{fmtAge(age)}</td>
+            </tr>
+          {/if}
+        {/each}
+      </tbody>
+    </table>
+  </div>
+{:else if activeTab === 'transducers'}
+  <p class="movement-note">
+    Data sensed from the water by transducers.
+    PGNs 128267 (water depth), 128259 (speed through water / paddle wheel),
+    130316 / 130312 / 130311 (water temperature), 128275 (distance log).
+  </p>
+  <div class="movement-scroll">
+    <table class="table table-movement">
+      <thead>
+        <tr>
+          <th rowspan="2">Src</th>
+          <th rowspan="2">Description</th>
+          <th colspan="3">Water Depth (128267)</th>
+          <th colspan="2">Speed Thru Water (128259)</th>
+          <th colspan="2">Water Temp (130316 / 130312 / 130311)</th>
+          <th colspan="2">Distance Log (128275)</th>
+          <th rowspan="2">Newest age</th>
+        </tr>
+        <tr>
+          <th>Depth</th>
+          <th>Offset</th>
+          <th>Range</th>
+          <th>Speed</th>
+          <th>Type</th>
+          <th>Temp</th>
+          <th>Source</th>
+          <th>Trip</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each Object.entries(dataBySource()) as [src, lst]}
+          {@const newest = newestTimestamp(lst, transducerPgns)}
+          {@const age = newest === null ? null : Date.now() - newest}
+          {#if findMsg(lst, 128267) || findMsg(lst, 128259) || findMsg(lst, 130316) || findMsg(lst, 130312) || findMsg(lst, 130311) || findMsg(lst, 128275)}
+            <tr>
+              <td><strong>{src}</strong></td>
+              <td>{description(lst)}</td>
+              <td>{fmtNum(getField(lst, [128267], 'Depth'), 2)}</td>
+              <td>{fmtNum(getField(lst, [128267], 'Offset'), 2)}</td>
+              <td>{fmtNum(getField(lst, [128267], 'Range'), 1)}</td>
+              <td>{fmtNum(getFieldMulti(lst, [128259], ['Speed Water Referenced', 'Speed']), 2)}</td>
+              <td>{fmtVal(getField(lst, [128259], 'Speed Water Referenced Type'))}</td>
+              <td>{fmtNum(getFieldMulti(lst, [130316, 130312, 130311], ['Temperature', 'Actual Temperature']), 2)}</td>
+              <td>{fmtVal(getFieldMulti(lst, [130316, 130312, 130311], ['Temperature Source', 'Source']))}</td>
+              <td>{fmtNum(getField(lst, [128275], 'Trip Log'), 1)}</td>
+              <td>{fmtNum(getFieldMulti(lst, [128275], ['Log', 'Total Log']), 1)}</td>
               <td>{fmtAge(age)}</td>
             </tr>
           {/if}
